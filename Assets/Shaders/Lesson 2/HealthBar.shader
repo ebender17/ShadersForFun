@@ -55,11 +55,24 @@ Shader "Unlit/HealthBar"
 
             fixed4 frag (interpolators i) : SV_Target
             {
-                float healthbarMask = _Health > i.uv.x; 
-                float tHealthColor = saturate(InverseLerp(0.2, 0.8, _Health));
-                float3 healthbarColor = lerp(float3(1,0,0), float3(0,1,0), tHealthColor);
+                float healthbarMask = _Health > i.uv.x;
+                //We need x-axis to stay the same and y-axis to not.
+                //x-axis - needs to have the same color going across health bar, therefore use _Health
+                //y-axis - needs to change so we get the shading present in texture, therefore use y-axis uvs
+                float3 healthbarColor = tex2D(_MainTex, float2(_Health, i.uv.y) );
+
                 
-                return float4(healthbarColor, healthbarMask);
+                if(_Health < 0.2)
+                {
+                    //Add 1 to go from 0.9 to 1.1 instead of -0.9 and 0.1 bc we multiply healthbarColor by flash.
+                    //If we multiply healthbarColor by 0 at some point, we will get black which we don't want.
+                    float flash = cos(_Time.y * 4) * 0.25 + 1;
+                    
+                    //Only the health bar flashes, not the black background.
+                    healthbarColor *= flash;
+                }
+                
+                return float4(healthbarColor * healthbarMask, 1);
             }
 
             /*fixed4 frag (interpolators i) : SV_Target
