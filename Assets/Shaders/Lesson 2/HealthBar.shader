@@ -55,7 +55,28 @@ Shader "Unlit/HealthBar"
 
             fixed4 frag (interpolators i) : SV_Target
             {
+                float2 coords = i.uv; //make seperate variable so we do not mess up coordinates for the rest of the code
+
+                coords.x *= 8; //scale to 8 to make health bar coord sys uniform, 0 to 1 should look square
+
+                //subtracts floored version of this coordinate, returns the fraction. In case it is continually increasing linearly, the uvs should repeat.
+                //return float4(frac(coords), 0, 1);
+
+                //want to 
+                float2 pointOnLineSeg = float2( clamp( coords.x, 0.5, 7.5 ), 0.5);
+                
+                //distance between current coord and point on line segment
+                //multiply by two so we have values from 0 to 1 at the very edge in all directions
+                //subtract 1 to get 0 for every pixel that we want in the healthbar, pixels we want cut off will be values other than 0
+                float sdf = distance(coords, pointOnLineSeg) * 2 - 1;
+                
+                //discard pixels outside sdf
+                clip(-sdf);
+                
+                //return(sdf.xxx, 1);
+
                 float healthbarMask = _Health > i.uv.x;
+
                 //We need x-axis to stay the same and y-axis to not.
                 //x-axis - needs to have the same color going across health bar, therefore use _Health
                 //y-axis - needs to change so we get the shading present in texture, therefore use y-axis uvs
@@ -73,9 +94,17 @@ Shader "Unlit/HealthBar"
                 }
                 
                 return float4(healthbarColor * healthbarMask, 1);
+
             }
 
-            /*fixed4 frag (interpolators i) : SV_Target
+           
+            ENDCG
+        }
+    }
+}
+
+// old healthbar
+ /*fixed4 frag (interpolators i) : SV_Target
             {
                 //If frag is less than _Health we get true which gives us 1 (or white). 
                 //If frag is not less than _Health we get false (0) which gives us black.
@@ -105,7 +134,3 @@ Shader "Unlit/HealthBar"
                 //Do not multiply if you want color part to be opaque
                 return float4(healthbarColor, healthbarMask * 0.5);
             }*/
-            ENDCG
-        }
-    }
-}
