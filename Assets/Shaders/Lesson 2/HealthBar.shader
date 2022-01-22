@@ -4,6 +4,7 @@ Shader "Unlit/HealthBar"
     {
         [NoScaleOffset] _MainTex ("Texture", 2D) = "white" {}
         _Health ("Health", Range(0,1)) = 1
+        _BorderSize ("Border Size", Range(0, 0.5)) = 0.1
     }
     SubShader
     {
@@ -38,6 +39,7 @@ Shader "Unlit/HealthBar"
 
             sampler2D _MainTex;
             float _Health;
+            float _BorderSize;
 
             interpolators vert (meshdata v)
             {
@@ -72,8 +74,20 @@ Shader "Unlit/HealthBar"
                 
                 //discard pixels outside sdf
                 clip(-sdf);
-                
+
+                float borderSdf = sdf + _BorderSize;
+
+                float pd = fwidth(borderSdf); //screen space partial derivative of the signed distance field, rate of change in screen space
+
+                //float borderMask = step(0, -borderSdf); //before we implemented anti-aliasing
+
+                float borderMask = 1 - saturate(borderSdf / pd); //we need to clamp with saturate and invert with minus one
+
                 //return(sdf.xxx, 1);
+
+                //return(borderSdf.xxx, 1);
+
+                //return (borderMask.xxx, 1);
 
                 float healthbarMask = _Health > i.uv.x;
 
@@ -93,7 +107,7 @@ Shader "Unlit/HealthBar"
                     healthbarColor *= flash;
                 }
                 
-                return float4(healthbarColor * healthbarMask, 1);
+                return float4(healthbarColor * healthbarMask * borderMask, 1);
 
             }
 
